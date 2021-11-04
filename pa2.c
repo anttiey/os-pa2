@@ -215,10 +215,7 @@ struct scheduler fifo_scheduler = {
  ***********************************************************************/
 static struct process *sjf_schedule(void)
 {
-	/**
-	 * Implement your own SJF scheduler here.
-	 */
-
+	
 	struct process *next = NULL;
 
 	struct process *temp = NULL;
@@ -270,9 +267,6 @@ struct scheduler sjf_scheduler = {
  ***********************************************************************/
 static struct process *srtf_schedule(void)
 {
-	/**
-	 * Implement your own SRTF scheduler here.
-	 */
 
 	struct process *next = NULL;
 
@@ -340,12 +334,9 @@ pick_next:
 
 struct scheduler srtf_scheduler = {
 	.name = "Shortest Remaining Time First",
-	.acquire = fcfs_acquire, /* Use the default FCFS acquire() */
-	.release = fcfs_release, /* Use the default FCFS release() */
+	.acquire = fcfs_acquire,
+	.release = fcfs_release,
 	.schedule = srtf_schedule,
-	/* You need to check the newly created processes to implement SRTF.
-	/* Use @forked() callback to mark newly created processes */
-	/* Obviously, you should implement srtf_schedule() and attach it here */
 };
 
 
@@ -353,9 +344,6 @@ struct scheduler srtf_scheduler = {
  * Round-robin scheduler
  ***********************************************************************/
 static struct process *rr_schedule(void) {
-	/**
-	 * Implement your own RR scheduler here.
-	 */
 
 	struct process *next = NULL;
 
@@ -382,10 +370,9 @@ pick_next:
 
 struct scheduler rr_scheduler = {
 	.name = "Round-Robin",
-	.acquire = fcfs_acquire, /* Use the default FCFS acquire() */
-	.release = fcfs_release, /* Use the default FCFS release() */
+	.acquire = fcfs_acquire,
+	.release = fcfs_release,
 	.schedule = rr_schedule,
-	/* Obviously, you should implement rr_schedule() and attach it here */
 };
 
 
@@ -404,7 +391,6 @@ bool prio_acquire(int resource_id)
 
 	/* OK, this resource is taken by @r->owner. */
 
-	
 	/* Update the current process state */
 	current->status = PROCESS_WAIT;
 
@@ -432,8 +418,8 @@ void prio_release(int resource_id)
 	/* Un-own this resource */
 	r->owner = NULL;
 
-	/* Let's wake up ONE waiter (if exists) that came first */
 	if (!list_empty(&r->waitqueue)) {
+
 		struct process *temp = NULL;
 		struct process *waiter =
 				list_first_entry(&r->waitqueue, struct process, list);
@@ -469,9 +455,6 @@ void prio_release(int resource_id)
 }
 
 static struct process *prio_schedule(void) {
-	/**
-	 * Implement your own Priority scheduler here.
-	 */
 
 	struct process *next = NULL;
 
@@ -507,19 +490,13 @@ pick_next:
 	
 	return next;
 
-
 }
 
 struct scheduler prio_scheduler = {
 	.name = "Priority",
-	/**
-	 * Implement your own acqure/release function to make priority
-	 * scheduler correct.
-	 */
 	.acquire = prio_acquire,
 	.release = prio_release,
 	.schedule = prio_schedule,
-	/* Implement your own prio_schedule() and attach it here */
 };
 
 
@@ -528,9 +505,7 @@ struct scheduler prio_scheduler = {
  ***********************************************************************/
 
 static struct process *pa_schedule(void) {
-	/**
-	 * Implement your own PA scheduler here.
-	 */
+
 	struct process *next = NULL;
 
 	struct process *temp = NULL;
@@ -582,14 +557,9 @@ pick_next:
 
 struct scheduler pa_scheduler = {
 	.name = "Priority + aging",
-	/**
-	 * Implement your own acqure/release function to make priority
-	 * scheduler correct.
-	 */
 	.acquire = prio_acquire,
 	.release = prio_release,
 	.schedule = pa_schedule,
-	/* Implement your own prio_schedule() and attach it here */
 };
 
 
@@ -603,6 +573,7 @@ bool pcp_acquire(int resource_id)
 	if (!r->owner) {
 		/* This resource is not owned by any one. Take it! */
 		r->owner = current;
+		/* Boost the priority of process in PCP */
 		current->prio = MAX_PRIO;
 		return true;
 	}
@@ -636,14 +607,13 @@ void pcp_release(int resource_id)
 	}
 
 	assert(r->owner == current);
-
 	current->prio = current->prio_orig;
 
 	/* Un-own this resource */
 	r->owner = NULL;
 
-	/* Let's wake up ONE waiter (if exists) that came first */
 	if (!list_empty(&r->waitqueue)) {
+
 		struct process *temp = NULL;
 		struct process *waiter =
 				list_first_entry(&r->waitqueue, struct process, list);
@@ -680,10 +650,6 @@ void pcp_release(int resource_id)
 
 struct scheduler pcp_scheduler = {
 	.name = "Priority + PCP Protocol",
-	/**
-	 * Implement your own acqure/release function too to make priority
-	 * scheduler correct.
-	 */
 	.acquire = pcp_acquire,
 	.release = pcp_release,
 	.schedule = prio_schedule,
@@ -741,8 +707,8 @@ void pip_release(int resource_id)
 	/* Un-own this resource */
 	r->owner = NULL;
 
-	/* Let's wake up ONE waiter (if exists) that came first */
 	if (!list_empty(&r->waitqueue)) {
+
 		struct process *temp = NULL;
 		struct process *waiter =
 				list_first_entry(&r->waitqueue, struct process, list);
@@ -779,9 +745,6 @@ void pip_release(int resource_id)
 
 struct scheduler pip_scheduler = {
 	.name = "Priority + PIP Protocol",
-	/**
-	 * Ditto
-	 */
 	.acquire = pip_acquire,
 	.release = pip_release,
 	.schedule = prio_schedule,
