@@ -297,24 +297,21 @@ static struct process *srtf_schedule(void)
 
 		if((current->lifespan - current->age) > (small->lifespan - small->age)) {
 
-			next = small;
 			if((current->lifespan - current->age) > 0) {
 				list_add_tail(&current->list, &readyqueue);
 			}
+
+			next = small;
 			list_del_init(&next->list);
 
 			return next;
 
-		} else {
-
-			if (current->age < current->lifespan) {
-				return current;
-			}
-
 		}
 
-		return next;
-
+	} 
+	
+	if ((current->lifespan - current->age) > 0) {
+			return current;
 	}
 
 pick_next:
@@ -417,7 +414,6 @@ static struct process *prio_schedule(void) {
 	 * Implement your own Priority scheduler here.
 	 */
 
-pick_next:
 
 }
 
@@ -440,7 +436,6 @@ static struct process *pa_schedule(void) {
 	 * Implement your own PA scheduler here.
 	 */
 
-pick_next:
 
 }
 
