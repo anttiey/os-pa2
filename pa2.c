@@ -392,10 +392,123 @@ struct scheduler rr_scheduler = {
 /***********************************************************************
  * Priority scheduler
  ***********************************************************************/
+bool prio_acquire(int resource_id)
+{
+	struct resource *r = resources + resource_id;
+
+	if (!r->owner) {
+		/* This resource is not owned by any one. Take it! */
+		r->owner = current;
+		return true;
+	}
+
+	/* OK, this resource is taken by @r->owner. */
+
+	if(r->owner->prio < current->prio) {
+
+		r->owner = current;
+		return true;
+
+	} 
+	
+	/* Update the current process state */
+	current->status = PROCESS_WAIT;
+
+	/* And append current to waitqueue */
+	list_add_tail(&current->list, &r->waitqueue);
+
+	/**
+	 * And return false to indicate the resource is not available.
+	 * The scheduler framework will soon call schedule() function to
+	 * schedule out current and to pick the next process to run.
+	 */
+	
+	return false;
+
+}
+
+void prio_release(int resource_id)
+{
+	struct resource *r = resources + resource_id;
+
+	/* Ensure that the owner process is releasing the resource */
+
+	if(r->owner != current) {
+		return;
+	}
+
+	assert(r->owner == current);
+
+	/* Un-own this resource */
+	r->owner = NULL;
+
+	/* Let's wake up ONE waiter (if exists) that came first */
+	if (!list_empty(&r->waitqueue)) {
+		struct process *waiter =
+				list_first_entry(&r->waitqueue, struct process, list);
+
+		/**
+		 * Ensure the waiter is in the wait status
+		 */
+		assert(waiter->status == PROCESS_WAIT);
+
+		/**
+		 * Take out the waiter from the waiting queue. Note we use
+		 * list_del_init() over list_del() to maintain the list head tidy
+		 * (otherwise, the framework will complain on the list head
+		 * when the process exits).
+		 */
+		list_del_init(&waiter->list);
+
+		/* Update the process status */
+		waiter->status = PROCESS_READY;
+
+		/**
+		 * Put the waiter process into ready queue. The framework will
+		 * do the rest.
+		 */
+		list_add_tail(&waiter->list, &readyqueue);
+	}
+}
+
 static struct process *prio_schedule(void) {
 	/**
 	 * Implement your own Priority scheduler here.
 	 */
+
+	struct process *next = NULL;
+
+	struct process *temp = NULL;
+	struct process *high = NULL;
+
+	if (!current || current->status == PROCESS_WAIT) {
+		goto pick_next;
+	}
+
+	if((current->lifespan - current->age) > 0) {
+		list_add_tail(&current->list, &readyqueue);
+	}
+
+pick_next:
+
+	if(!list_empty(&readyqueue)) {
+
+		high = list_first_entry(&readyqueue, struct process, list);
+
+		list_for_each_entry(temp, &readyqueue, list) {
+
+			if(high->prio < temp->prio) {
+				high = temp;
+			}
+
+		}
+
+		next = high;
+		list_del_init(&next->list);
+
+	}
+	
+	return next;
 
 
 }
@@ -406,6 +519,8 @@ struct scheduler prio_scheduler = {
 	 * Implement your own acqure/release function to make priority
 	 * scheduler correct.
 	 */
+	.acquire = prio_acquire,
+	.release = prio_release,
 	.schedule = prio_schedule,
 	/* Implement your own prio_schedule() and attach it here */
 };
@@ -414,11 +529,57 @@ struct scheduler prio_scheduler = {
 /***********************************************************************
  * Priority scheduler with aging
  ***********************************************************************/
+
 static struct process *pa_schedule(void) {
 	/**
 	 * Implement your own PA scheduler here.
 	 */
+	struct process *next = NULL;
 
+	struct process *temp = NULL;
+	struct process *high = NULL;
+
+	if(!list_empty(&readyqueue)) {
+
+		list_for_each_entry(temp, &readyqueue, list) {
+			temp->prio += 1;
+			if(temp->prio > MAX_PRIO) {
+				temp->prio = MAX_PRIO;
+			}
+		}
+
+	}
+
+	if (!current || current->status == PROCESS_WAIT) {
+		goto pick_next;
+	}
+
+	if((current->lifespan - current->age) > 0) {
+		list_add_tail(&current->list, &readyqueue);
+	}
+
+pick_next:
+
+	if(!list_empty(&readyqueue)) {
+
+		high = list_first_entry(&readyqueue, struct process, list);
+
+		list_for_each_entry(temp, &readyqueue, list) {
+
+			if(high->prio < temp->prio) {
+				high = temp;
+			}
+
+		}
+
+		next = high;
+		list_del_init(&next->list);
+		
+		next->prio = next->prio_orig;
+
+	}
+	
+	return next;
 
 }
 
@@ -428,6 +589,9 @@ struct scheduler pa_scheduler = {
 	 * Implement your own acqure/release function to make priority
 	 * scheduler correct.
 	 */
+	.acquire = prio_acquire,
+	.release = prio_release,
+	.schedule = pa_schedule,
 	/* Implement your own prio_schedule() and attach it here */
 };
 
