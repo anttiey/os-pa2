@@ -644,8 +644,15 @@ void pcp_release(int resource_id)
 
 	/* Let's wake up ONE waiter (if exists) that came first */
 	if (!list_empty(&r->waitqueue)) {
+		struct process *temp = NULL;
 		struct process *waiter =
 				list_first_entry(&r->waitqueue, struct process, list);
+		
+		list_for_each_entry(temp, &r->waitqueue, list) {
+			if(waiter->prio < temp->prio) {
+				waiter = temp;
+			}
+		}
 
 		/**
 		 * Ensure the waiter is in the wait status
@@ -736,8 +743,15 @@ void pip_release(int resource_id)
 
 	/* Let's wake up ONE waiter (if exists) that came first */
 	if (!list_empty(&r->waitqueue)) {
+		struct process *temp = NULL;
 		struct process *waiter =
 				list_first_entry(&r->waitqueue, struct process, list);
+		
+		list_for_each_entry(temp, &r->waitqueue, list) {
+			if(waiter->prio < temp->prio) {
+				waiter = temp;
+			}
+		}
 
 		/**
 		 * Ensure the waiter is in the wait status
