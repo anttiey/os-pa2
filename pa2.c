@@ -404,12 +404,6 @@ bool prio_acquire(int resource_id)
 
 	/* OK, this resource is taken by @r->owner. */
 
-	if(r->owner->prio < current->prio) {
-
-		r->owner = current;
-		return true;
-
-	} 
 	
 	/* Update the current process state */
 	current->status = PROCESS_WAIT;
@@ -433,10 +427,6 @@ void prio_release(int resource_id)
 
 	/* Ensure that the owner process is releasing the resource */
 
-	if(r->owner != current) {
-		return;
-	}
-
 	assert(r->owner == current);
 
 	/* Un-own this resource */
@@ -444,8 +434,15 @@ void prio_release(int resource_id)
 
 	/* Let's wake up ONE waiter (if exists) that came first */
 	if (!list_empty(&r->waitqueue)) {
+		struct process *temp = NULL;
 		struct process *waiter =
 				list_first_entry(&r->waitqueue, struct process, list);
+
+		list_for_each_entry(temp, &r->waitqueue, list) {
+			if(waiter->prio < temp->prio) {
+				waiter = temp;
+			}
+		}
 
 		/**
 		 * Ensure the waiter is in the wait status
@@ -701,7 +698,7 @@ bool pip_acquire(int resource_id)
 
 	/* OK, this resource is taken by @r->owner. */
 	if(r->owner->prio < current->prio) {
-		r->owner->prio = MAX_PRIO;
+		r->owner->prio = current->prio;
 	} 
 
 	/* Update the current process state */
